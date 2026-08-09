@@ -1,1 +1,1 @@
-# Auditon v1 — Collaborative Expense Tracker
+# Auditon — Collaborative Expense Tracker
