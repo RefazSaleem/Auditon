@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ loan.name }} - Loan Detail{% endblock %}
+{% block content %}
+<div class="loan-detail-page">
+    <div class="page-header">
+        <h1>{{ loan.name }}</h1>
+        <p class="subtitle">{{ loan.description or 'Manage your payments' }}</p>
+    </div>
+    <div class="loan-info-bar">
+        <div class="info-item">
+            <span class="info-label">Total Amount</span>
+            <span class="info-value">{{ currency }}{{ "%.2f" % loan.total_amount }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Monthly Due</span>
+            <span class="info-value">{{ currency }}{{ "%.2f" % loan.monthly_due }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Tenure</span>
+            <span class="info-value">{{ loan.tenure_months }} months</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Start Date</span>
+            <span class="info-value">{{ loan.start_date }}</span>
+        </div>
+    </div>
+    <form method="post" action="/loans/{{ loan.id }}/pay" id="paymentForm">
+        <div class="payment-grid-header">
+            <h3>Payment Schedule</h3>
+            <div class="bulk-actions">
+                <span id="selectedCount">0 selected</span>
+                <input type="hidden" name="payment_ids" id="paymentIds">
+                <input type="text" name="description" placeholder="Note (e.g. 'Reserved 3 months')" style="min-width: 200px;">
+                <button type="submit" name="status" value="reserved" class="btn btn-secondary">Mark Reserved</button>
+                <button type="submit" name="status" value="paid" class="btn btn-primary">Mark Paid</button>
+                <button type="submit" name="status" value="pending" class="btn btn-ghost">Reset to Pending</button>
+            </div>
+        </div>
+        <div class="payment-grid">
+            {% for p in payments %}
+            <label class="payment-cell {{ p.status }}" data-status="{{ p.status }}">
+                <input type="checkbox" class="payment-check" value="{{ p.id }}" onchange="updateSelection()">
+                <div class="payment-month">Month {{ p.month_number }}</div>
+                <div class="payment-date">{{ p.due_date }}</div>
+                <div class="payment-amount">{{ currency }}{{ "%.2f" % p.amount }}</div>
+                <div class="payment-status">
+                    {% if p.status == 'paid' %}✅ Paid
+                    {% elif p.status == 'reserved' %}🔒 Reserved
+                    {% else %}⏳ Pending
+                    {% endif %}
+                </div>
+                {% if p.description %}
+                <div class="payment-note">{{ p.description }}</div>
+                {% endif %}
+            </label>
+            {% endfor %}
+        </div>
+    </form>
+    <div class="legend">
+        <span class="legend-item"><span class="dot pending"></span> Pending</span>
+        <span class="legend-item"><span class="dot reserved"></span> Reserved</span>
+        <span class="legend-item"><span class="dot paid"></span> Paid</span>
+    </div>
+</div>
+<script>
+function updateSelection() {
+    const checks = document.querySelectorAll('.payment-check:checked');
+    const ids = Array.from(checks).map(c => c.value).join(',');
+    document.getElementById('paymentIds').value = ids;
+    document.getElementById('selectedCount').textContent = checks.length + ' selected';
+}
+document.getElementById('paymentForm').addEventListener('submit', function(e) {
+    if (!document.getElementById('paymentIds').value) {
+        e.preventDefault();
+        alert('Please select at least one month.');
+    }
+});
+</script>
+{% endblock %}

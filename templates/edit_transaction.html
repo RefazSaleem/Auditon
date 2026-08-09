@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Edit Transaction - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="form-page">
+    <div class="page-header">
+        <h1>Edit Transaction</h1>
+    </div>
+    <div class="card">
+        <form method="post" action="/edit/{{ transaction.id }}" id="transactionForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Instance <span style="color:var(--danger)">*</span></label>
+                    <select name="instance_id" required>
+                        <option value="">-- Select Instance --</option>
+                        {% for inst in instances %}
+                        <option value="{{ inst.id }}" {% if transaction.instance_id == inst.id %}selected{% endif %}>{{ inst.name }} ({{ inst.role | title }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select name="transaction_type" id="typeSelect" onchange="toggleTransfer()">
+                        <option value="expense" {% if transaction.transaction_type == 'expense' %}selected{% endif %}>Expense</option>
+                        <option value="income" {% if transaction.transaction_type == 'income' %}selected{% endif %}>Income</option>
+                        <option value="transfer" {% if transaction.transaction_type == 'transfer' %}selected{% endif %}>Transfer</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" name="date" value="{{ transaction.date }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" name="amount" step="0.01" min="0" value="{{ transaction.amount }}" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" name="description" value="{{ transaction.description }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category_id">
+                        <option value="">-- Select --</option>
+                        <optgroup label="Expense">
+                            {% for cat in categories %}{% if not cat.is_income %}
+                            <option value="{{ cat.id }}" {% if transaction.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endif %}{% endfor %}
+                        </optgroup>
+                        <optgroup label="Income">
+                            {% for cat in categories %}{% if cat.is_income %}
+                            <option value="{{ cat.id }}" {% if transaction.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endif %}{% endfor %}
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row" id="sourceRow">
+                <div class="form-group" id="fromSourceGroup">
+                    <label id="sourceLabel">{{ 'From Source' if transaction.transaction_type == 'transfer' else 'Source' }}</label>
+                    <select name="source_id">
+                        <option value="">-- Select --</option>
+                        {% for s in sources %}
+                        <option value="{{ s.id }}" {% if transaction.source_id == s.id %}selected{% endif %}>{{ s.name }} ({{ s.type }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" id="toSourceGroup" {% if transaction.transaction_type != 'transfer' %}style="display:none;"{% endif %}>
+                    <label>To Source</label>
+                    <select name="to_source_id">
+                        <option value="">-- Select --</option>
+                        {% for s in sources %}
+                        <option value="{{ s.id }}" {% if transaction.to_source_id == s.id %}selected{% endif %}>{{ s.name }} ({{ s.type }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tags</label>
+                    <input type="text" name="tags" value="{{ transaction.tags | join(', ') }}">
+                </div>
+            </div>
+            <div class="form-row toggles" id="togglesRow" {% if transaction.transaction_type == 'transfer' %}style="display:none;"{% endif %}>
+                <label class="toggle-card company">
+                    <input type="checkbox" name="is_company" {% if transaction.is_company %}checked{% endif %}>
+                    <span class="toggle-icon">🏢</span>
+                    <span class="toggle-label-text">Company reimbursable</span>
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a href="/transactions" class="btn btn-ghost">Cancel</a>
+                <a href="/delete/{{ transaction.id }}" class="btn btn-danger" onclick="return confirm('Delete?')">Delete</a>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function toggleTransfer() {
+    const type = document.getElementById('typeSelect').value;
+    document.getElementById('toSourceGroup').style.display = type === 'transfer' ? 'block' : 'none';
+    document.getElementById('sourceLabel').textContent = type === 'transfer' ? 'From Source' : 'Source';
+}
+</script>
+{% endblock %}

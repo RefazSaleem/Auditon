@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% block title %}Profile - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="profile-page">
+    <div class="page-header">
+        <h1>Profile</h1>
+        <p class="subtitle">Manage your account</p>
+    </div>
+    {% if request.query_params.get('saved') %}
+    <div class="alert alert-success">Profile updated successfully!</div>
+    {% endif %}
+    {% if request.query_params.get('pass_changed') %}
+    <div class="alert alert-success">Password changed successfully!</div>
+    {% endif %}
+    {% if request.query_params.get('error') %}
+    <div class="alert alert-error">{{ request.query_params.get('error') }}</div>
+    {% endif %}
+    <div class="settings-grid">
+        <div class="settings-card profile-card">
+            <div class="profile-header">
+                {% if user_data.profile_picture %}
+                <img src="{{ user_data.profile_picture }}" class="profile-avatar-large" alt="avatar" id="currentAvatar">
+                {% else %}
+                <div class="profile-avatar-large" id="currentAvatar">{{ user.username[0].upper() }}</div>
+                {% endif %}
+                <div class="profile-meta">
+                    <h2>{{ user_data.profile_name or user.username }}</h2>
+                    <span class="profile-role">{% if user.username == 'admin' %}Administrator{% else %}Member{% endif %}</span>
+                    <span class="profile-since">Joined {{ user_data.created_at[:10] if user_data.created_at else '—' }}</span>
+                </div>
+            </div>
+            <form method="post" action="/profile" id="profileForm">
+                <div class="form-group">
+                    <label>Profile Name</label>
+                    <input type="text" name="profile_name" value="{{ user_data.profile_name or '' }}" placeholder="Display name">
+                    <small class="form-hint">Shown in the UI. Username remains your login ID.</small>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" value="{{ user.username }}" required minlength="2">
+                </div>
+                <div class="form-group">
+                    <label>Profile Picture</label>
+                    <div class="avatar-upload">
+                        <div class="avatar-preview-wrap">
+                            {% if user_data.profile_picture %}
+                            <img src="{{ user_data.profile_picture }}" class="avatar-preview-img" id="avatarPreview" alt="preview">
+                            {% else %}
+                            <div class="avatar-preview-img avatar-preview-initial" id="avatarPreview">{{ user.username[0].upper() }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="avatar-actions">
+                            <button type="button" class="btn btn-secondary btn-sm" id="choosePhotoBtn">Choose Photo</button>
+                            {% if user_data.profile_picture %}
+                            <button type="button" class="btn btn-ghost btn-sm" id="removeAvatarBtn">Remove</button>
+                            {% else %}
+                            <button type="button" class="btn btn-ghost btn-sm" id="removeAvatarBtn" style="display:none">Remove</button>
+                            {% endif %}
+                        </div>
+                        <input type="file" id="avatarFileInput" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none">
+                        <input type="hidden" name="avatar_data" id="avatarDataInput">
+                        <small class="form-hint">PNG, JPG, GIF, WEBP. Cropped to a circle automatically.</small>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Save Profile</button>
+            </form>
+        </div>
+        <div class="settings-card">
+            <h3>Change Password</h3>
+            <form method="post" action="/profile/password">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" name="current_password" required>
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" name="new_password" required minlength="4">
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password</label>
+                    <input type="password" name="confirm_password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Change Password</button>
+            </form>
+        </div>
+        <div class="settings-card">
+            <h3>Account Stats</h3>
+            <div class="stat-row">
+                <span class="stat-label">Total Transactions</span>
+                <span class="stat-value">{{ stats.total_transactions }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Categories</span>
+                <span class="stat-value">{{ stats.total_categories }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Sources</span>
+                <span class="stat-value">{{ stats.total_sources }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Cards</span>
+                <span class="stat-value">{{ stats.total_cards }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Loans</span>
+                <span class="stat-value">{{ stats.total_loans }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Avatar Cropper Modal -->
+<div class="avatar-cropper-modal" id="cropperModal">
+    <div class="avatar-cropper-backdrop"></div>
+    <div class="avatar-cropper-content">
+        <h4>Crop Your Avatar</h4>
+        <div class="cropper-stage">
+            <div class="cropper-viewport" id="cropperViewport">
+                <img id="cropperImage" src="" alt="crop">
+            </div>
+            <div class="cropper-overlay"></div>
+        </div>
+        <div class="cropper-zoom">
+            <span>Zoom</span>
+            <input type="range" id="zoomSlider" min="1" max="3" step="0.01" value="1">
+        </div>
+        <div class="cropper-buttons">
+            <button type="button" class="btn btn-secondary" id="cancelCropBtn">Cancel</button>
+            <button type="button" class="btn btn-primary" id="applyCropBtn">Apply</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const chooseBtn = document.getElementById('choosePhotoBtn');
+    const fileInput = document.getElementById('avatarFileInput');
+    const removeBtn = document.getElementById('removeAvatarBtn');
+    const avatarDataInput = document.getElementById('avatarDataInput');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const currentAvatar = document.getElementById('currentAvatar');
+    const modal = document.getElementById('cropperModal');
+    const cropperImage = document.getElementById('cropperImage');
+    const zoomSlider = document.getElementById('zoomSlider');
+    const applyBtn = document.getElementById('applyCropBtn');
+    const cancelBtn = document.getElementById('cancelCropBtn');
+    const viewport = document.getElementById('cropperViewport');
+
+    let currentFile = null;
+    let scale = 1;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let translateX = 0, translateY = 0;
+
+    chooseBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!file.type.match(/image.*/)) return;
+        currentFile = file;
+        const url = URL.createObjectURL(file);
+        cropperImage.src = url;
+        cropperImage.onload = () => {
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            zoomSlider.value = 1;
+            updateTransform();
+            modal.classList.add('show');
+        };
+    });
+
+    zoomSlider.addEventListener('input', (e) => {
+        scale = parseFloat(e.target.value);
+        updateTransform();
+    });
+
+    function updateTransform() {
+        cropperImage.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + scale + ')';
+    }
+
+    viewport.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX - translateX;
+        startY = e.clientY - translateY;
+        cropperImage.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        translateX = e.clientX - startX;
+        translateY = e.clientY - startY;
+        updateTransform();
+    });
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+        cropperImage.style.cursor = 'grab';
+    });
+
+    cancelBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        fileInput.value = '';
+    });
+
+    applyBtn.addEventListener('click', () => {
+        const canvas = document.createElement('canvas');
+        const size = 400;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        const img = new Image();
+        img.onload = () => {
+            const viewportRect = viewport.getBoundingClientRect();
+            const imgRect = cropperImage.getBoundingClientRect();
+
+            const cropSize = viewportRect.width;
+            const scaleRatio = img.naturalWidth / (imgRect.width / scale);
+
+            const offsetX = (viewportRect.left - imgRect.left + translateX) * scaleRatio;
+            const offsetY = (viewportRect.top - imgRect.top + translateY) * scaleRatio;
+            const drawSize = cropSize * scaleRatio;
+
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+
+            ctx.drawImage(img, offsetX, offsetY, drawSize, drawSize, 0, 0, size, size);
+
+            const dataUrl = canvas.toDataURL('image/png');
+            avatarDataInput.value = dataUrl;
+
+            // Update preview
+            let newImg = document.createElement('img');
+            newImg.src = dataUrl;
+            newImg.className = 'avatar-preview-img';
+            newImg.id = 'avatarPreview';
+            newImg.alt = 'preview';
+            avatarPreview.replaceWith(newImg);
+
+            // Update header avatar
+            let newCurrent = document.createElement('img');
+            newCurrent.src = dataUrl;
+            newCurrent.className = 'profile-avatar-large';
+            newCurrent.id = 'currentAvatar';
+            newCurrent.alt = 'avatar';
+            currentAvatar.replaceWith(newCurrent);
+
+            removeBtn.style.display = 'inline-flex';
+            modal.classList.remove('show');
+        };
+        img.src = cropperImage.src;
+    });
+
+    removeBtn.addEventListener('click', () => {
+        if (!confirm('Remove your profile picture?')) return;
+        fetch('/profile/remove_avatar', {method: 'POST'})
+            .then(() => {
+                avatarDataInput.value = '';
+                fileInput.value = '';
+
+                const initial = document.getElementById('currentAvatar');
+                const newDiv = document.createElement('div');
+                newDiv.className = 'profile-avatar-large';
+                newDiv.id = 'currentAvatar';
+                newDiv.textContent = '{{ user.username[0].upper() }}';
+                initial.replaceWith(newDiv);
+
+                const preview = document.getElementById('avatarPreview');
+                const newPrev = document.createElement('div');
+                newPrev.className = 'avatar-preview-img avatar-preview-initial';
+                newPrev.id = 'avatarPreview';
+                newPrev.textContent = '{{ user.username[0].upper() }}';
+                preview.replaceWith(newPrev);
+
+                removeBtn.style.display = 'none';
+            });
+    });
+})();
+</script>
+{% endblock %}

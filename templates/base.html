@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" type="image/png" href="/static/icon.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Auditon">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    {% if user %}
+    <div id="toast-container"></div>
+    <nav class="navbar">
+        <a href="/" class="nav-brand" style="text-decoration:none;">
+            <div class="brand-icon" style="padding:0;overflow:hidden;">
+                <img src="/static/icon.png" alt="logo" style="width:28px;height:28px;object-fit:contain;border-radius:var(--radius-xs);">
+            </div>
+            <span class="brand-text">{{ app_name }}</span>
+        </a>
+        <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+        </button>
+        <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+        <div class="side-menu" id="sideMenu">
+            <div class="menu-header">
+                <div class="user-info">
+                    {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture }}" class="user-avatar" alt="avatar" style="object-fit:cover;">
+                    {% else %}
+                    <div class="user-avatar">{{ user.username[0].upper() }}</div>
+                    {% endif %}
+                    <div class="user-details">
+                        <span class="user-name">{{ user.profile_name or user.username }}</span>
+                        <span class="user-role">{% if user.is_admin %}Administrator{% else %}Member{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+            {% if user_instances %}
+            <div class="menu-nav">
+                {% for inst in user_instances %}
+                <a href="/instances/{{ inst.id }}" class="menu-item {% if request.url.path == '/instances/' ~ inst.id or request.url.path.startswith('/instances/' ~ inst.id ~ '/') %}active{% endif %}">
+                    <span class="menu-icon">&#127968;</span><span>{{ inst.name }}</span>
+                </a>
+                {% endfor %}
+            </div>
+            <div class="menu-divider"></div>
+            {% endif %}
+            <div class="menu-nav">
+                <a href="/wizard" class="menu-item {% if request.url.path == '/wizard' %}active{% endif %}">
+                    <span class="menu-icon">&#10133;</span><span>New Instance</span>
+                </a>
+                <a href="/profile" class="menu-item {% if request.url.path == '/profile' %}active{% endif %}">
+                    <span class="menu-icon">&#128100;</span><span>Profile</span>
+                </a>
+                <a href="/settings" class="menu-item {% if request.url.path == '/settings' %}active{% endif %}">
+                    <span class="menu-icon">&#9881;&#65039;</span><span>Settings</span>
+                </a>
+                {% if user.is_admin %}
+                <a href="/admin/users" class="menu-item {% if request.url.path.startswith('/admin') %}active{% endif %}">
+                    <span class="menu-icon">&#128737;&#65039;</span><span>Admin</span>
+                </a>
+                {% endif %}
+                <a href="/logout" class="menu-item logout">
+                    <span class="menu-icon">&#128682;</span><span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    <script>
+        function toggleMenu() {
+            document.getElementById('sideMenu').classList.toggle('open');
+            document.getElementById('menuOverlay').classList.toggle('open');
+            document.getElementById('hamburger').classList.toggle('open');
+            document.body.classList.toggle('menu-open');
+        }
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${type === 'success' ? '&#10003;' : '&#9888;'}</div>
+                <div class="toast-message">${message}</div>
+                <button class="toast-close" onclick="this.parentElement.remove()">&#215;</button>
+            `;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('show'));
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
+        }
+        const urlParams = new URLSearchParams(window.location.search);
+        const toastMsg = urlParams.get('toast');
+        if (toastMsg) {
+            showToast(decodeURIComponent(toastMsg));
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+        }
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        setTheme(savedTheme);
+        function applyFontSettings() {
+            const font = localStorage.getItem('font_family') || '{{ settings.get("font_family", "system") }}';
+            const size = localStorage.getItem('font_size') || '{{ settings.get("font_size", "medium") }}';
+            const fontMap = {
+                'system': "'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, 'Noto Sans', 'Inter', sans-serif",
+                'inter': "'Inter', 'Segoe UI', sans-serif",
+                'roboto': "'Roboto', 'Noto Sans', sans-serif",
+                'mono': "'Courier New', 'SF Mono', 'Fira Code', monospace",
+                'serif': "'Georgia', 'Times New Roman', serif"
+            };
+            const sizeMap = {'small': '13px', 'medium': '16px', 'large': '19px'};
+            document.documentElement.style.setProperty('--font', fontMap[font] || fontMap['system']);
+            document.documentElement.style.fontSize = sizeMap[size] || '16px';
+        }
+        applyFontSettings();
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js')
+                .then((reg) => console.log('SW registered', reg.scope))
+                .catch((err) => console.log('SW registration failed', err));
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Sources - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="sources-page">
+    <div class="page-header">
+        <h1>Payment Sources</h1>
+    </div>
+    {% if request.query_params.get('error') %}
+    <div class="alert alert-error">{{ request.query_params.get('error') }}</div>
+    {% endif %}
+    <div class="card">
+        <h3>Add New Source</h3>
+        <form method="post" action="/sources/add" class="category-form">
+            <input type="text" name="name" placeholder="Source name (e.g. PayPal, Wallet)" required>
+            <select name="source_type">
+                <option value="credit_card">Credit Card</option>
+                <option value="debit_card">Debit Card</option>
+                <option value="cash">Cash</option>
+                <option value="digital_wallet">Digital Wallet</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="custom">Custom</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Add Source</button>
+        </form>
+    </div>
+    <div class="sources-grid">
+        {% for sb in source_balances %}
+        <div class="source-card">
+            <div class="source-header">
+                <div class="source-icon">{{ {'credit_card':'💳','debit_card':'💳','cash':'💵','digital_wallet':'📱','bank_transfer':'🏦','custom':'💰'}.get(sb.source.type, '💰') }}</div>
+                <div class="source-info">
+                    <div class="source-name">{{ sb.source.name }}</div>
+                    <div class="source-type">{{ sb.source.type.replace('_', ' ') | title }}</div>
+                </div>
+            </div>
+            <div class="source-balance {% if sb.balance >= 0 %}positive{% else %}negative{% endif %}">
+                {{ currency }}{{ "%.2f" % sb.balance }}
+            </div>
+            {% if not sb.source.is_default %}
+            <a href="/sources/delete/{{ sb.source.id }}" class="delete-link" onclick="return confirm('Delete?')">×</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

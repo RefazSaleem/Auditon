@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Instances - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="instances-page">
+    <div class="page-header">
+        <h1>Instances</h1>
+        <p class="subtitle">Collaborative expense tracking</p>
+    </div>
+    {% if request.query_params.get('error') %}
+    <div class="alert alert-error">{{ request.query_params.get('error') }}</div>
+    {% endif %}
+    {% if request.query_params.get('joined') %}
+    <div class="alert alert-success">You joined the instance!</div>
+    {% endif %}
+    <div style="margin-bottom:20px;">
+        <a href="/wizard" class="btn btn-primary">+ Create New Instance</a>
+    </div>
+    <div class="instances-grid">
+        {% for inst in instances %}
+        <a href="/instances/{{ inst.id }}" class="instance-card">
+            <div class="instance-icon">&#127968;</div>
+            <div class="instance-info">
+                <h4>{{ inst.name }}</h4>
+                <span class="instance-role">{{ inst.role | title }}</span>
+                <span class="instance-members">{{ inst.member_count }} member{{ 's' if inst.member_count != 1 else '' }}</span>
+                <span class="instance-currency" style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">{{ inst.currency or '$' }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

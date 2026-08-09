@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Create Instance - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="wizard-page">
+    <div class="page-header">
+        <h1>Create Instance</h1>
+        <p class="subtitle">Step-by-step setup wizard</p>
+    </div>
+    <form method="post" action="/wizard" id="wizard-form">
+        <div class="wizard-steps">
+            <div class="wizard-step active" data-step="1">
+                <div class="settings-card">
+                    <h3><span class="step-num">1</span> Basic Info</h3>
+                    <div class="form-group">
+                        <label>Instance Name</label>
+                        <input type="text" name="name" placeholder="Home Expenses, Office Budget..." required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label>Currency</label>
+                        <select name="currency" required>
+                            <option value="$">$ Dollar</option>
+                            <option value="€">€ Euro</option>
+                            <option value="£">£ Pound</option>
+                            <option value="¥">¥ Yen</option>
+                            <option value="₹">₹ Rupee</option>
+                            <option value="₩">₩ Won</option>
+                            <option value="A$">A$ AUD</option>
+                            <option value="C$">C$ CAD</option>
+                            <option value="Ð">Ð Dirham</option>
+                        </select>
+                    </div>
+                    <div class="wizard-nav">
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+                    </div>
+                </div>
+            </div>
+            <div class="wizard-step" data-step="2">
+                <div class="settings-card">
+                    <h3><span class="step-num">2</span> Members</h3>
+                    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">Select users to add as members. You are automatically the owner.</p>
+                    {% if all_users %}
+                    <div class="wizard-user-list">
+                        {% for u in all_users %}
+                        {% if u.id != user.id %}
+                        <label class="wizard-user-item">
+                            <input type="checkbox" name="member_ids_list" value="{{ u.id }}" class="member-check">
+                            <div class="wizard-user-avatar">{{ u.username[0].upper() }}</div>
+                            <span class="wizard-user-name">{{ u.username }}</span>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p style="color:var(--text-muted)">No other users available.</p>
+                    {% endif %}
+                    <input type="hidden" name="member_ids" id="member_ids_input" value="">
+                    <div class="wizard-nav">
+                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+                    </div>
+                </div>
+            </div>
+            <div class="wizard-step" data-step="3">
+                <div class="settings-card">
+                    <h3><span class="step-num">3</span> Sources</h3>
+                    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">One source per line. These are payment methods or accounts.</p>
+                    <div class="form-group">
+                        <textarea name="source_names" rows="5" placeholder="Hand Cash&#10;Credit Card&#10;Bank Account&#10;PayPal">Hand Cash
+Credit Card
+Bank Account</textarea>
+                    </div>
+                    <div class="wizard-nav">
+                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+                    </div>
+                </div>
+            </div>
+            <div class="wizard-step" data-step="4">
+                <div class="settings-card">
+                    <h3><span class="step-num">4</span> Categories</h3>
+                    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">Format: Name|Color (one per line). Default colors used if omitted.</p>
+                    <div class="form-row" style="grid-template-columns:1fr 1fr;">
+                        <div class="form-group">
+                            <label>Expense Categories</label>
+                            <textarea name="expense_cats" rows="6" placeholder="Food|#ef4444&#10;Transport|#f97316">Food|#ef4444
+Transport|#f97316
+Housing|#eab308
+Utilities|#22c55e
+Entertainment|#3b82f6
+Healthcare|#8b5cf6
+Shopping|#ec4899
+Other|#6b7280</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Income Categories</label>
+                            <textarea name="income_cats" rows="6" placeholder="Salary|#10b981&#10;Freelance|#06b6d4">Salary|#10b981
+Freelance|#06b6d4
+Investments|#f59e0b
+Other Income|#84cc16</textarea>
+                        </div>
+                    </div>
+                    <div class="wizard-nav">
+                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+                    </div>
+                </div>
+            </div>
+            <div class="wizard-step" data-step="5">
+                <div class="settings-card">
+                    <h3><span class="step-num">5</span> Loans (Optional)</h3>
+                    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">Add loans now or skip and add later.</p>
+                    <div id="loan-list"></div>
+                    <button type="button" class="btn btn-secondary btn-block" onclick="addLoanRow()" style="margin-bottom:16px;">+ Add Loan</button>
+                    <input type="hidden" name="loan_count" id="loan_count" value="0">
+                    <div class="wizard-nav">
+                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                        <button type="submit" class="btn btn-primary">Create Instance</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<style>
+.wizard-steps { position:relative; }
+.wizard-step { display:none; }
+.wizard-step.active { display:block; animation:fadeInUp 0.4s ease-out; }
+.step-num { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:var(--primary); color:white; font-weight:700; font-size:0.85rem; margin-right:10px; }
+.wizard-nav { display:flex; justify-content:space-between; margin-top:20px; gap:12px; }
+.wizard-user-list { display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; }
+.wizard-user-item { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--surface); border:2px solid var(--border); border-radius:var(--radius-xs); cursor:pointer; transition:all 0.2s ease; }
+.wizard-user-item:hover { border-color:var(--primary); }
+.wizard-user-item:has(input:checked) { border-color:var(--primary); background:var(--primary-glow); }
+.wizard-user-item input { accent-color:var(--primary); width:18px; height:18px; }
+.wizard-user-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; flex-shrink:0; }
+.wizard-user-name { font-weight:600; font-size:0.9rem; }
+.loan-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-xs); padding:16px; margin-bottom:12px; }
+.loan-row-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.loan-row-title { font-weight:700; font-size:0.95rem; }
+.loan-row-remove { background:none; border:none; color:var(--danger); font-size:1.2rem; cursor:pointer; }
+</style>
+<script>
+let currentStep = 1;
+const totalSteps = 5;
+function showStep(n) {
+    document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+    document.querySelector('.wizard-step[data-step="' + n + '"]').classList.add('active');
+    currentStep = n;
+}
+function nextStep() {
+    if (currentStep < totalSteps) showStep(currentStep + 1);
+}
+function prevStep() {
+    if (currentStep > 1) showStep(currentStep - 1);
+}
+let loanIndex = 0;
+function addLoanRow() {
+    const list = document.getElementById('loan-list');
+    const div = document.createElement('div');
+    div.className = 'loan-row';
+    div.innerHTML = `
+        <div class="loan-row-header">
+            <span class="loan-row-title">Loan #${loanIndex + 1}</span>
+            <button type="button" class="loan-row-remove" onclick="this.closest('.loan-row').remove()">&#215;</button>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Name</label><input type="text" name="loan_name_${loanIndex}" required></div>
+            <div class="form-group"><label>Total Amount</label><input type="number" name="loan_amount_${loanIndex}" step="0.01" required></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Tenure (months)</label><input type="number" name="loan_tenure_${loanIndex}" required></div>
+            <div class="form-group"><label>Monthly Due</label><input type="number" name="loan_monthly_${loanIndex}" step="0.01" required></div>
+        </div>
+        <div class="form-group"><label>Start Date</label><input type="date" name="loan_start_${loanIndex}" value="{{ today }}" required></div>
+        <div class="form-group"><label>Description</label><input type="text" name="loan_desc_${loanIndex}"></div>
+    `;
+    list.appendChild(div);
+    loanIndex++;
+    document.getElementById('loan_count').value = loanIndex;
+}
+document.getElementById('wizard-form').addEventListener('submit', function() {
+    const checks = document.querySelectorAll('.member-check:checked');
+    const ids = Array.from(checks).map(c => c.value).join(',');
+    document.getElementById('member_ids_input').value = ids;
+});
+</script>
+{% endblock %}

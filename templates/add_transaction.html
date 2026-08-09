@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Add Transaction - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="form-page">
+    <div class="page-header">
+        <h1>Add Transaction</h1>
+    </div>
+    <div class="card">
+        <form method="post" action="/add" id="transactionForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Instance <span style="color:var(--danger)">*</span></label>
+                    <select name="instance_id" required>
+                        <option value="">-- Select Instance --</option>
+                        {% for inst in instances %}
+                        <option value="{{ inst.id }}">{{ inst.name }} ({{ inst.role | title }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select name="transaction_type" id="typeSelect" onchange="toggleTransfer()">
+                        <option value="expense">Expense</option>
+                        <option value="income">Income</option>
+                        <option value="transfer">Transfer</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" name="date" value="{{ today }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" name="amount" step="0.01" min="0" required autofocus>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" name="description" placeholder="What was this for?" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category_id">
+                        <option value="">-- Select --</option>
+                        <optgroup label="Expense">
+                            {% for cat in categories %}{% if not cat.is_income %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endif %}{% endfor %}
+                        </optgroup>
+                        <optgroup label="Income">
+                            {% for cat in categories %}{% if cat.is_income %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endif %}{% endfor %}
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row" id="sourceRow">
+                <div class="form-group" id="fromSourceGroup">
+                    <label id="sourceLabel">Source</label>
+                    <select name="source_id">
+                        <option value="">-- Select --</option>
+                        {% for s in sources %}
+                        <option value="{{ s.id }}">{{ s.name }} ({{ s.type }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" id="toSourceGroup" style="display:none;">
+                    <label>To Source</label>
+                    <select name="to_source_id">
+                        <option value="">-- Select --</option>
+                        {% for s in sources %}
+                        <option value="{{ s.id }}">{{ s.name }} ({{ s.type }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tags</label>
+                    <input type="text" name="tags" placeholder="work, travel, urgent">
+                </div>
+            </div>
+            <div class="form-row toggles" id="togglesRow">
+                <label class="toggle-card company">
+                    <input type="checkbox" name="is_company">
+                    <span class="toggle-icon">🏢</span>
+                    <span class="toggle-label-text">Company reimbursable</span>
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Add Transaction</button>
+                <a href="/" class="btn btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function toggleTransfer() {
+    const type = document.getElementById('typeSelect').value;
+    document.getElementById('toSourceGroup').style.display = type === 'transfer' ? 'block' : 'none';
+    document.getElementById('sourceLabel').textContent = type === 'transfer' ? 'From Source' : 'Source';
+}
+</script>
+{% endblock %}

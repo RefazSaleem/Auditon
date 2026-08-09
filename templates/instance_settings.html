@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ instance.name }} Settings - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="instance-page">
+    <div class="page-header">
+        <h1>{{ instance.name }}</h1>
+        <p class="subtitle">Instance Settings</p>
+    </div>
+    {% if request.query_params.get('saved') %}
+    <div class="alert alert-success">Settings saved successfully!</div>
+    {% endif %}
+    <div class="settings-grid">
+        <div class="settings-card">
+            <h3>General</h3>
+            <form method="post" action="/instances/{{ instance.id }}/settings">
+                <div class="form-group">
+                    <label>Instance Name</label>
+                    <input type="text" name="name" value="{{ instance.name }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select name="currency" required>
+                        <option value="$" {% if instance.currency == '$' %}selected{% endif %}>$ Dollar</option>
+                        <option value="€" {% if instance.currency == '€' %}selected{% endif %}>€ Euro</option>
+                        <option value="£" {% if instance.currency == '£' %}selected{% endif %}>£ Pound</option>
+                        <option value="¥" {% if instance.currency == '¥' %}selected{% endif %}>¥ Yen</option>
+                        <option value="₹" {% if instance.currency == '₹' %}selected{% endif %}>₹ Rupee</option>
+                        <option value="₩" {% if instance.currency == '₩' %}selected{% endif %}>₩ Won</option>
+                        <option value="A$" {% if instance.currency == 'A$' %}selected{% endif %}>A$ AUD</option>
+                        <option value="C$" {% if instance.currency == 'C$' %}selected{% endif %}>C$ CAD</option>
+                        <option value="Ð" {% if instance.currency == 'Ð' %}selected{% endif %}>Ð Dirham</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Save General Settings</button>
+            </form>
+        </div>
+        <div class="settings-card">
+            <h3>Dashboard Cards</h3>
+            <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">Toggle which sections appear on this instance's dashboard.</p>
+            <form method="post" action="/instances/{{ instance.id }}/settings">
+                <input type="hidden" name="name" value="{{ instance.name }}">
+                <input type="hidden" name="currency" value="{{ instance.currency or '$' }}">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+                    <label class="tab-checkbox">
+                        <input type="checkbox" name="view_transactions" {% if view_config.transactions %}checked{% endif %}>
+                        <span>Transactions</span>
+                    </label>
+                    <label class="tab-checkbox">
+                        <input type="checkbox" name="view_cards" {% if view_config.cards %}checked{% endif %}>
+                        <span>Cards</span>
+                    </label>
+                    <label class="tab-checkbox">
+                        <input type="checkbox" name="view_sources" {% if view_config.sources %}checked{% endif %}>
+                        <span>Sources</span>
+                    </label>
+                    <label class="tab-checkbox">
+                        <input type="checkbox" name="view_categories" {% if view_config.categories %}checked{% endif %}>
+                        <span>Categories</span>
+                    </label>
+                    <label class="tab-checkbox">
+                        <input type="checkbox" name="view_recurring" {% if view_config.recurring %}checked{% endif %}>
+                        <span>Recurring</span>
+                    </label>
+                    <label class="tab-checkbox">
+                        <input type="checkbox" name="view_loans" {% if view_config.loans %}checked{% endif %}>
+                        <span>Loans</span>
+                    </label>
+                    <label class="tab-checkbox">
+                        <input type="checkbox" name="view_reports" {% if view_config.reports %}checked{% endif %}>
+                        <span>Reports</span>
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Save Card Visibility</button>
+            </form>
+        </div>
+        <div class="settings-card">
+            <h3>Members</h3>
+            <div class="members-list">
+                {% for member in members %}
+                <div class="member-item">
+                    <div class="member-avatar">{{ member.username[0].upper() }}</div>
+                    <div class="member-info">
+                        <span class="member-name">{{ member.username }}</span>
+                        <span class="member-role">{{ member.role | title }}</span>
+                    </div>
+                    {% if (instance.role == 'owner' or user.is_admin) and member.role != 'owner' %}
+                    <a href="/instances/{{ instance.id }}/remove/{{ member.user_id }}" class="btn btn-sm btn-danger" onclick="return confirm('Remove this member?')">Remove</a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% if instance.role == 'owner' %}
+            <form method="post" action="/instances/{{ instance.id }}/invite" style="margin-top:16px">
+                <button type="submit" class="btn btn-primary btn-block">Generate Invite Link</button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="settings-card">
+            <h3>Danger Zone</h3>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                {% if instance.role == 'owner' %}
+                <a href="/instances/{{ instance.id }}/delete" class="btn btn-danger btn-block" onclick="return confirm('Delete this instance and all its data?')">Delete Instance</a>
+                {% else %}
+                <a href="/instances/{{ instance.id }}/leave" class="btn btn-secondary btn-block" onclick="return confirm('Leave this instance?')">Leave Instance</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div style="margin-top:20px;">
+        <a href="/instances/{{ instance.id }}" class="btn btn-secondary">&#8592; Back to Instance</a>
+    </div>
+</div>
+{% endblock %}

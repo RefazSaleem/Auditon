@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Get Started - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="auth-container" style="min-height:70vh;">
+    <div class="auth-card" style="max-width:520px;">
+        <div class="auth-header">
+            <img src="/static/icon.png" alt="logo" style="width:64px;height:64px;object-fit:contain;margin:0 auto 16px;display:block;">
+            <h1>Welcome to {{ app_name }}</h1>
+            <p class="auth-subtitle">You are not part of any instance yet.</p>
+        </div>
+        {% if request.query_params.get('requested') %}
+        <div class="alert alert-success">Request sent to administrator.</div>
+        {% endif %}
+        {% if request.query_params.get('error') %}
+        <div class="alert alert-error">{{ request.query_params.get('error') }}</div>
+        {% endif %}
+        <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:24px;">
+            <a href="/wizard" class="btn btn-primary btn-block" style="font-size:1.05rem;padding:16px 24px;">
+                <span style="font-size:1.4rem;margin-right:8px;">&#128640;</span> Create New Instance
+            </a>
+            <div style="text-align:center;color:var(--text-muted);font-size:0.9rem;">or</div>
+            <div class="card" style="margin-bottom:0;">
+                <h3 style="margin-bottom:12px;font-size:1rem;">&#128239; Request Collaboration Access</h3>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">Ask your administrator to add you to an existing instance.</p>
+                <form method="post" action="/no-instance/request">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <textarea name="message" rows="2" placeholder="Optional message to admin..." style="resize:none;"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-secondary btn-block">Send Request</button>
+                </form>
+            </div>
+        </div>
+        {% if user.is_admin %}
+        <div class="card" style="margin-bottom:0;">
+            <h3 style="margin-bottom:12px;font-size:1rem;">&#128737;&#65039; Admin Quick Actions</h3>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <a href="/wizard" class="btn btn-primary btn-block">Create Instance with Wizard</a>
+                <a href="/admin/users" class="btn btn-secondary btn-block">Manage Users</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

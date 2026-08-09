@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Loans - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="loans-page">
+    <div class="page-header">
+        <h1>Loan Manager</h1>
+        <p class="subtitle">Track your loans and EMI payments</p>
+    </div>
+    <div class="card">
+        <h3>Add New Loan</h3>
+        <form method="post" action="/loans/add">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Loan Name</label>
+                    <input type="text" name="name" placeholder="Home Loan, Car Loan..." required>
+                </div>
+                <div class="form-group">
+                    <label>Total Amount</label>
+                    <input type="number" name="total_amount" step="0.01" min="0" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tenure (months)</label>
+                    <input type="number" name="tenure_months" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Monthly Due</label>
+                    <input type="number" name="monthly_due" step="0.01" min="0" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" name="start_date" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" name="description" placeholder="Optional notes">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Loan</button>
+        </form>
+    </div>
+    {% if loans %}
+    <div class="loans-list">
+        {% for loan in loans %}
+        <div class="loan-card">
+            <div class="loan-header">
+                <div class="loan-title">
+                    <h3>{{ loan.name }}</h3>
+                    <p class="loan-desc">{{ loan.description or 'No description' }}</p>
+                </div>
+                <div class="loan-amount">
+                    <div class="loan-total">{{ currency }}{{ "%.2f" % loan.total_amount }}</div>
+                    <div class="loan-tenure">{{ loan.tenure_months }} months</div>
+                </div>
+            </div>
+            <div class="loan-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ ((loan.paid_count + loan.reserved_count) / loan.tenure_months * 100) }}%"></div>
+                </div>
+                <div class="progress-stats">
+                    <span class="stat paid">{{ loan.paid_count }} Paid</span>
+                    <span class="stat reserved">{{ loan.reserved_count }} Reserved</span>
+                    <span class="stat pending">{{ loan.pending_count }} Pending</span>
+                </div>
+            </div>
+            <div class="loan-actions">
+                <a href="/loans/{{ loan.id }}" class="btn btn-primary">Manage Payments</a>
+                <a href="/loans/delete/{{ loan.id }}" class="btn btn-danger" onclick="return confirm('Delete loan and all payment records?')">Delete</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📑</div>
+        <p>No loans yet. Add your first loan above.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

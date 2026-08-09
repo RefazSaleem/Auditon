@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Settings - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="settings-page">
+    <div class="page-header">
+        <h1>Settings</h1>
+        <p class="subtitle">Customize your experience</p>
+    </div>
+    {% if request.query_params.get('saved') %}
+    <div class="alert alert-success">Settings saved successfully!</div>
+    {% endif %}
+    {% if request.query_params.get('user_created') %}
+    <div class="alert alert-success">User created successfully!</div>
+    {% endif %}
+    <div class="settings-grid">
+        <div class="settings-card">
+            <h3>Appearance</h3>
+            <form method="post" action="/settings">
+                <div class="form-group">
+                    <label>Theme</label>
+                    <div class="theme-options">
+                        <label class="theme-option">
+                            <input type="radio" name="theme" value="light" {% if settings.get('theme', 'light') == 'light' %}checked{% endif %} onchange="setTheme('light')">
+                            <div class="theme-preview" style="background: linear-gradient(135deg, #f0f4f8, #ffffff);"></div>
+                            <div class="theme-name">Light</div>
+                        </label>
+                        <label class="theme-option">
+                            <input type="radio" name="theme" value="amoled" {% if settings.get('theme') == 'amoled' %}checked{% endif %} onchange="setTheme('amoled')">
+                            <div class="theme-preview" style="background: linear-gradient(135deg, #000000, #0a0a0a); border-radius: 16px;"></div>
+                            <div class="theme-name">AMOLED</div>
+                        </label>
+                        <label class="theme-option">
+                            <input type="radio" name="theme" value="android" {% if settings.get('theme') == 'android' %}checked{% endif %} onchange="setTheme('android')">
+                            <div class="theme-preview" style="background: linear-gradient(135deg, #1c1b1f, #313033); border-radius: 16px;"></div>
+                            <div class="theme-name">Android</div>
+                        </label>
+                        <label class="theme-option">
+                            <input type="radio" name="theme" value="windows" {% if settings.get('theme') == 'windows' %}checked{% endif %} onchange="setTheme('windows')">
+                            <div class="theme-preview" style="background: linear-gradient(135deg, #f3f3f3, #ffffff); border-radius: 0;"></div>
+                            <div class="theme-name">Windows</div>
+                        </label>
+                        <label class="theme-option">
+                            <input type="radio" name="theme" value="macos" {% if settings.get('theme') == 'macos' %}checked{% endif %} onchange="setTheme('macos')">
+                            <div class="theme-preview" style="background: linear-gradient(135deg, #1e1e1e, #2d2d2d); border-radius: 12px;"></div>
+                            <div class="theme-name">macOS</div>
+                        </label>
+                        <label class="theme-option">
+                            <input type="radio" name="theme" value="hacker" {% if settings.get('theme') == 'hacker' %}checked{% endif %} onchange="setTheme('hacker')">
+                            <div class="theme-preview" style="background: linear-gradient(135deg, #000000, #0a0a0a); border-radius: 16px;"></div>
+                            <div class="theme-name">Hacker</div>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Font Family</label>
+                    <select name="font_family" onchange="setFontFamily(this.value)">
+                        <option value="system" {% if settings.get('font_family', 'system') == 'system' %}selected{% endif %}>System Default</option>
+                        <option value="inter" {% if settings.get('font_family') == 'inter' %}selected{% endif %}>Inter</option>
+                        <option value="roboto" {% if settings.get('font_family') == 'roboto' %}selected{% endif %}>Roboto</option>
+                        <option value="mono" {% if settings.get('font_family') == 'mono' %}selected{% endif %}>Monospace</option>
+                        <option value="serif" {% if settings.get('font_family') == 'serif' %}selected{% endif %}>Serif</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Font Size</label>
+                    <select name="font_size" onchange="setFontSize(this.value)">
+                        <option value="small" {% if settings.get('font_size') == 'small' %}selected{% endif %}>Small</option>
+                        <option value="medium" {% if settings.get('font_size', 'medium') == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="large" {% if settings.get('font_size') == 'large' %}selected{% endif %}>Large</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date Format</label>
+                    <select name="date_format">
+                        <option value="YYYY-MM-DD" {% if settings.get('date_format', 'YYYY-MM-DD') == 'YYYY-MM-DD' %}selected{% endif %}>2024-06-27</option>
+                        <option value="DD/MM/YYYY" {% if settings.get('date_format') == 'DD/MM/YYYY' %}selected{% endif %}>27/06/2024</option>
+                        <option value="MM/DD/YYYY" {% if settings.get('date_format') == 'MM/DD/YYYY' %}selected{% endif %}>06/27/2024</option>
+                        <option value="DD MMM YYYY" {% if settings.get('date_format') == 'DD MMM YYYY' %}selected{% endif %}>27 Jun 2024</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Language</label>
+                    <select name="language">
+                        <option value="en" {% if settings.get('language', 'en') == 'en' %}selected{% endif %}>English</option>
+                        <option value="es" {% if settings.get('language') == 'es' %}selected{% endif %}>Espanol</option>
+                        <option value="fr" {% if settings.get('language') == 'fr' %}selected{% endif %}>Francais</option>
+                        <option value="de" {% if settings.get('language') == 'de' %}selected{% endif %}>Deutsch</option>
+                        <option value="hi" {% if settings.get('language') == 'hi' %}selected{% endif %}>Hindi</option>
+                        <option value="zh" {% if settings.get('language') == 'zh' %}selected{% endif %}>Chinese</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Save Settings</button>
+            </form>
+        </div>
+        {% if user.is_admin %}
+        <div class="settings-card">
+            <h3>Admin</h3>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:20px;">Manage users and instances.</p>
+            <a href="/admin/users" class="btn btn-primary btn-block" style="margin-bottom:10px;">User Management</a>
+            <a href="/admin/instances" class="btn btn-secondary btn-block">Instance Management</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function setFontFamily(font) {
+    const map = {
+        'system': "'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, 'Noto Sans', 'Inter', sans-serif",
+        'inter': "'Inter', 'Segoe UI', sans-serif",
+        'roboto': "'Roboto', 'Noto Sans', sans-serif",
+        'mono': "'Courier New', 'SF Mono', 'Fira Code', monospace",
+        'serif': "'Georgia', 'Times New Roman', serif"
+    };
+    document.documentElement.style.setProperty('--font', map[font] || map['system']);
+    localStorage.setItem('font_family', font);
+}
+function setFontSize(size) {
+    const map = {'small': '13px', 'medium': '16px', 'large': '19px'};
+    document.documentElement.style.fontSize = map[size] || '16px';
+    localStorage.setItem('font_size', size);
+}
+const savedFont = localStorage.getItem('font_family') || '{{ settings.get("font_family", "system") }}';
+const savedSize = localStorage.getItem('font_size') || '{{ settings.get("font_size", "medium") }}';
+setFontFamily(savedFont);
+setFontSize(savedSize);
+</script>
+{% endblock %}

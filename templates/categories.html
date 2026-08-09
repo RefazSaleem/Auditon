@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Categories - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="categories-page">
+    <div class="page-header">
+        <h1>Categories</h1>
+    </div>
+    {% if request.query_params.get('error') %}
+    <div class="alert alert-error">{{ request.query_params.get('error') }}</div>
+    {% endif %}
+    <div class="card">
+        <h3>Add New Category</h3>
+        <form method="post" action="/categories/add" class="category-form">
+            <input type="text" name="name" placeholder="Category name" required>
+            <input type="color" name="color" value="#6366f1">
+            <select name="is_income">
+                <option value="false">Expense</option>
+                <option value="true">Income</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+    </div>
+    <div class="categories-grid">
+        <div class="category-section">
+            <h3>Expense Categories</h3>
+            <div class="category-list">
+                {% for cat in categories %}
+                {% if not cat.is_income %}
+                <div class="category-item">
+                    <span class="category-dot" style="background: {{ cat.color }}"></span>
+                    <span class="category-name">{{ cat.name }}</span>
+                    <a href="/categories/delete/{{ cat.id }}" class="delete-link" onclick="return confirm('Delete?')">×</a>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <div class="category-section">
+            <h3>Income Categories</h3>
+            <div class="category-list">
+                {% for cat in categories %}
+                {% if cat.is_income %}
+                <div class="category-item">
+                    <span class="category-dot" style="background: {{ cat.color }}"></span>
+                    <span class="category-name">{{ cat.name }}</span>
+                    <a href="/categories/delete/{{ cat.id }}" class="delete-link" onclick="return confirm('Delete?')">×</a>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Change Currency - {{ instance.name }}{% endblock %}
+{% block content %}
+<div class="instance-page">
+    <div class="page-header">
+        <h1>Change Currency</h1>
+        <p class="subtitle">{{ instance.name }} • Current: {{ instance.currency or '$' }}</p>
+    </div>
+    {% if request.query_params.get('error') %}
+    <div class="alert alert-error">{{ request.query_params.get('error') }}</div>
+    {% endif %}
+    <div class="settings-card" style="max-width:480px;">
+        <form method="post" action="/instances/{{ instance.id }}/edit_currency">
+            <div class="form-group">
+                <label>New Currency</label>
+                <select name="currency" required>
+                    <option value="$">$ Dollar</option>
+                    <option value="€">€ Euro</option>
+                    <option value="£">£ Pound</option>
+                    <option value="¥">¥ Yen</option>
+                    <option value="₹">₹ Rupee</option>
+                    <option value="₩">₩ Won</option>
+                    <option value="A$">A$ AUD</option>
+                    <option value="C$">C$ CAD</option>
+                    <option value="Ð">Ð Dirham</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Conversion Rate (new / old)</label>
+                <input type="number" name="conversion_rate" step="0.0001" value="1.0" required>
+                <p style="color:var(--text-muted);font-size:0.8rem;margin-top:4px;">All amounts will be multiplied by this rate.</p>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:20px;cursor:pointer;">
+                <input type="checkbox" name="confirm" value="1" required>
+                <span style="font-size:0.9rem;">I understand this will convert all transaction amounts.</span>
+            </label>
+            <button type="submit" class="btn btn-primary btn-block">Update Currency</button>
+            <a href="/instances/{{ instance.id }}" class="btn btn-secondary btn-block" style="margin-top:8px;">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

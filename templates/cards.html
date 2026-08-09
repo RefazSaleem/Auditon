@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Card Vault - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="cards-page">
+    <div class="page-header">
+        <h1>Card Vault</h1>
+        <p class="subtitle">Securely store your card details</p>
+    </div>
+    <div class="card">
+        <h3>Add New Card</h3>
+        <form method="post" action="/cards/add">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Card Name</label>
+                    <input type="text" name="name" placeholder="My Visa" required>
+                </div>
+                <div class="form-group">
+                    <label>Bank Name</label>
+                    <input type="text" name="bank_name" placeholder="Chase">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Card Number</label>
+                    <input type="text" name="card_number" placeholder="0000 0000 0000 0000" required>
+                </div>
+                <div class="form-group">
+                    <label>Card Holder</label>
+                    <input type="text" name="card_holder" placeholder="JOHN DOE">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Expiry Date</label>
+                    <input type="text" name="expiry_date" placeholder="MM/YY" required>
+                </div>
+                <div class="form-group">
+                    <label>CVV</label>
+                    <input type="text" name="cvv" placeholder="123" required>
+                </div>
+                <div class="form-group">
+                    <label>Color</label>
+                    <input type="color" name="color" value="#6366f1">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Card</button>
+        </form>
+    </div>
+    <div class="cards-grid">
+        {% for card in cards %}
+        <div class="credit-card-wrapper">
+            <div class="credit-card" style="background: linear-gradient(135deg, {{ card.color }}, {{ card.color }}dd);">
+                <div class="card-bank">{{ card.bank_name or 'BANK' }}</div>
+                <div class="card-chip">
+                    <svg width="32" height="24" viewBox="0 0 40 30"><rect x="2" y="2" width="36" height="26" rx="4" fill="#d4af37"/><line x1="20" y1="2" x2="20" y2="28" stroke="#b8941f" stroke-width="1.5"/><line x1="2" y1="15" x2="38" y2="15" stroke="#b8941f" stroke-width="1.5"/></svg>
+                </div>
+                <div class="card-contactless">📶</div>
+                <div class="card-number-row">
+                    <span class="card-number">{{ card.card_number[:4] }} {{ card.card_number[4:8] }} {{ card.card_number[8:12] }} {{ card.card_number[12:] }}</span>
+                    <button type="button" class="btn-copy" onclick="copyCard(event, this, '{{ card.card_number }}')" title="Copy number">📋</button>
+                </div>
+                <div class="card-bottom">
+                    <div class="card-holder">
+                        <div class="card-label">Card Holder</div>
+                        <div class="card-value">{{ card.card_holder or 'YOUR NAME' }}</div>
+                    </div>
+                    <div class="card-expiry">
+                        <div class="card-label">Expires</div>
+                        <div class="card-value">{{ card.expiry_date }}</div>
+                    </div>
+                    <div class="card-cvv-front">
+                        <div class="card-label">CVV</div>
+                        <div class="card-cvv-value-wrapper">
+                            <span class="card-cvv-dots" id="cvv-dots-{{ card.id }}">•••</span>
+                            <span class="card-cvv-revealed" id="cvv-rev-{{ card.id }}" style="display:none;">{{ card.cvv }}</span>
+                            <button type="button" class="btn-cvv-eye" onclick="toggleCvv(event, {{ card.id }})" title="Show/Hide CVV" id="eye-{{ card.id }}">👁️</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-actions">
+                <span class="card-name-tag">{{ card.name }}</span>
+                <a href="/cards/delete/{{ card.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete card?')">Delete</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+<script>
+function copyCard(e, btn, number) {
+    e.stopPropagation();
+    e.preventDefault();
+    const doCopy = () => {
+        btn.textContent = '✓';
+        btn.classList.add('copied');
+        if (typeof showToast === 'function') {
+            showToast('Copied to clipboard', 'success');
+        }
+        setTimeout(() => { btn.textContent = '📋'; btn.classList.remove('copied'); }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(number).then(doCopy).catch(() => fallbackCopy(number, doCopy));
+    } else {
+        fallbackCopy(number, doCopy);
+    }
+}
+function fallbackCopy(text, callback) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+        document.execCommand('copy');
+        callback();
+    } catch (err) {
+        if (typeof showToast === 'function') {
+            showToast('Copy failed', 'error');
+        }
+    }
+    document.body.removeChild(ta);
+}
+function toggleCvv(e, id) {
+    e.stopPropagation();
+    e.preventDefault();
+    const dots = document.getElementById('cvv-dots-' + id);
+    const rev = document.getElementById('cvv-rev-' + id);
+    const eye = document.getElementById('eye-' + id);
+    if (rev.style.display === 'none') {
+        rev.style.display = 'inline';
+        dots.style.display = 'none';
+        eye.textContent = '🙈';
+    } else {
+        rev.style.display = 'none';
+        dots.style.display = 'inline';
+        eye.textContent = '👁️';
+    }
+}
+</script>
+{% endblock %}

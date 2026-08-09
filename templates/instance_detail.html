@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% block title %}{{ instance.name }} - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="instance-page">
+    <div class="page-header">
+        <h1>{{ instance.name }}</h1>
+        <p class="subtitle">{{ instance.role | title }} • {{ instance.member_count }} members • {{ instance.currency or '$' }}</p>
+        <div class="header-actions">
+            <a href="/wizard" class="btn btn-primary">+ New Instance</a>
+            <a href="/instances" class="btn btn-secondary">All Instances</a>
+        </div>
+    </div>
+    {% if request.query_params.get('invite') %}
+    <div class="alert alert-success">
+        Invite link: <code>{{ request.query_params.get('invite') }}</code>
+        <button type="button" class="btn-copy" onclick="copyToClipboard(this, '{{ request.query_params.get('invite') }}')">📋</button>
+    </div>
+    {% endif %}
+    {% if request.query_params.get('joined') %}
+    <div class="alert alert-success">Joined successfully!</div>
+    {% endif %}
+    <div class="summary-grid">
+        <div class="summary-card income">
+            <div class="summary-label">Income</div>
+            <div class="summary-value">{{ instance.currency or '$' }}{{ "%.2f" % summary.income }}</div>
+        </div>
+        <div class="summary-card expense">
+            <div class="summary-label">Expenses</div>
+            <div class="summary-value">{{ instance.currency or '$' }}{{ "%.2f" % summary.expenses }}</div>
+        </div>
+        <div class="summary-card net {% if summary.net >= 0 %}positive{% else %}negative{% endif %}">
+            <div class="summary-label">Net</div>
+            <div class="summary-value">{{ instance.currency or '$' }}{{ "%.2f" % summary.net }}</div>
+        </div>
+        <div class="summary-card company">
+            <div class="summary-label">Company</div>
+            <div class="summary-value">{{ instance.currency or '$' }}{{ "%.2f" % summary.company }}</div>
+        </div>
+    </div>
+    <div class="settings-grid">
+        <div class="settings-card">
+            <h3>Members</h3>
+            <div class="members-list">
+                {% for member in members %}
+                <div class="member-item">
+                    <div class="member-avatar">{{ member.username[0].upper() }}</div>
+                    <div class="member-info">
+                        <span class="member-name">{{ member.username }}</span>
+                        <span class="member-role">{{ member.role | title }}</span>
+                    </div>
+                    {% if (instance.role == 'owner' or user.is_admin) and member.role != 'owner' %}
+                    <a href="/instances/{{ instance.id }}/remove/{{ member.user_id }}" class="btn btn-sm btn-danger" onclick="return confirm('Remove this member?')">Remove</a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% if instance.role == 'owner' %}
+            <form method="post" action="/instances/{{ instance.id }}/invite" style="margin-top:16px">
+                <button type="submit" class="btn btn-primary btn-block">Generate Invite Link</button>
+            </form>
+            {% endif %}
+            {% if instance.role == 'owner' or user.is_admin %}
+            <div style="margin-top:12px;">
+                <a href="/instances/{{ instance.id }}/edit_currency" class="btn btn-sm btn-secondary">Change Currency</a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="settings-card">
+            <h3>Add Transaction</h3>
+            <form method="post" action="/add">
+                <input type="hidden" name="instance_id" value="{{ instance.id }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select name="transaction_type">
+                            <option value="expense">Expense</option>
+                            <option value="income">Income</option>
+                            <option value="transfer">Transfer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" name="date" value="{{ today }}" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Amount</label>
+                        <input type="number" name="amount" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" name="description" placeholder="What was this for?" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Source</label>
+                        <select name="source_id">
+                            <option value="">—</option>
+                            {% for s in sources %}
+                            <option value="{{ s.id }}">{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select name="category_id">
+                            <option value="">—</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tags</label>
+                        <input type="text" name="tags" placeholder="work, shared">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <label class="toggle-card company" style="margin:0;">
+                            <input type="checkbox" name="is_company">
+                            <span class="toggle-icon">🏢</span>
+                            <span class="toggle-label-text">Company</span>
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Add Transaction</button>
+            </form>
+        </div>
+        {% if view_config.get('transactions', true) %}
+        <div class="settings-card full-width">
+            <div class="dash-section-header">
+                <h3>Transactions</h3>
+                <a href="/transactions?instance_id={{ instance.id }}" class="btn btn-sm btn-secondary">View All</a>
+            </div>
+            <div id="tx-section">
+                {% if transactions %}
+                <div class="transactions-list">
+                    {% for t in transactions %}
+                    <div class="transaction-item {{ t.transaction_type }}">
+                        <div class="transaction-info">
+                            <div class="transaction-desc">
+                                {{ t.description }}
+                                {% if t.is_company %}<span class="company-badge">Company</span>{% endif %}
+                            </div>
+                            <div class="transaction-meta">
+                                {{ t.date }} • {{ t.created_by_name or '—' }}
+                                {% if t.category_name %}• {{ t.category_name }}{% endif %}
+                                {% for tag in t.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+                            </div>
+                        </div>
+                        <div class="transaction-amount {{ t.transaction_type }}">
+                            {% if t.transaction_type == 'income' %}+{% elif t.transaction_type == 'transfer' %}→{% endif %}
+                            {{ instance.currency or '$' }}{{ "%.2f" % t.amount }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color:var(--text-muted)">No transactions yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% if view_config.get('cards', true) %}
+        <div class="settings-card">
+            <div class="dash-section-header">
+                <h3>Cards</h3>
+                <a href="/cards?instance_id={{ instance.id }}" class="btn btn-sm btn-secondary">Manage</a>
+            </div>
+            <div id="cards-section">
+                {% if cards %}
+                <div class="cards-grid">
+                    {% for card in cards %}
+                    <div class="credit-card-wrapper">
+                        <div class="credit-card" style="background: linear-gradient(135deg, {{ card.color }}, {{ card.color }}dd);">
+                            <div class="card-bank">{{ card.bank_name or 'BANK' }}</div>
+                            <div class="card-chip">
+                                <svg width="32" height="24" viewBox="0 0 40 30"><rect x="2" y="2" width="36" height="26" rx="4" fill="#d4af37"/><line x1="20" y1="2" x2="20" y2="28" stroke="#b8941f" stroke-width="1.5"/><line x1="2" y1="15" x2="38" y2="15" stroke="#b8941f" stroke-width="1.5"/></svg>
+                            </div>
+                            <div class="card-contactless">📶</div>
+                            <div class="card-number-row">
+                                <span class="card-number">{{ card.card_number[:4] }} {{ card.card_number[4:8] }} {{ card.card_number[8:12] }} {{ card.card_number[12:] }}</span>
+                                <button type="button" class="btn-copy" onclick="copyCard(event, this, '{{ card.card_number }}')" title="Copy number">📋</button>
+                            </div>
+                            <div class="card-bottom">
+                                <div class="card-holder">
+                                    <div class="card-label">Card Holder</div>
+                                    <div class="card-value">{{ card.card_holder or 'YOUR NAME' }}</div>
+                                </div>
+                                <div class="card-expiry">
+                                    <div class="card-label">Expires</div>
+                                    <div class="card-value">{{ card.expiry_date }}</div>
+                                </div>
+                                <div class="card-cvv-front">
+                                    <div class="card-label">CVV</div>
+                                    <div class="card-cvv-value-wrapper">
+                                        <span class="card-cvv-dots" id="cvv-dots-{{ card.id }}">•••</span>
+                                        <span class="card-cvv-revealed" id="cvv-rev-{{ card.id }}" style="display:none;">{{ card.cvv }}</span>
+                                        <button type="button" class="btn-cvv-eye" onclick="toggleCvv(event, {{ card.id }})" title="Show/Hide CVV" id="eye-{{ card.id }}">👁️</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <span class="card-name-tag">{{ card.name }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color:var(--text-muted)">No cards saved.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% if view_config.get('sources', true) %}
+        <div class="settings-card">
+            <div class="dash-section-header">
+                <h3>Sources</h3>
+                <a href="/sources?instance_id={{ instance.id }}" class="btn btn-sm btn-secondary">Manage</a>
+            </div>
+            <div id="sources-section">
+                {% if sources %}
+                <div class="sources-strip">
+                    {% for sb in source_balances %}
+                    <div class="source-chip {% if sb.balance >= 0 %}positive{% else %}negative{% endif %}">
+                        <span class="source-chip-name">{{ sb.source.name }}</span>
+                        <span class="source-chip-balance">{{ instance.currency or '$' }}{{ "%.2f" % sb.balance }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color:var(--text-muted)">No sources yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% if view_config.get('categories', true) %}
+        <div class="settings-card">
+            <div class="dash-section-header">
+                <h3>Categories</h3>
+                <a href="/categories?instance_id={{ instance.id }}" class="btn btn-sm btn-secondary">Manage</a>
+            </div>
+            <div id="cats-section">
+                {% if categories %}
+                <div class="category-list" style="display:flex;flex-wrap:wrap;gap:8px;">
+                    {% for cat in categories %}
+                    <div class="category-item" style="padding:6px 12px;">
+                        <div class="category-dot" style="background:{{ cat.color }};box-shadow:0 0 8px {{ cat.color }};"></div>
+                        <span class="category-name">{{ cat.name }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color:var(--text-muted)">No categories yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% if view_config.get('recurring', true) %}
+        <div class="settings-card">
+            <div class="dash-section-header">
+                <h3>Recurring</h3>
+                <a href="/recurring?instance_id={{ instance.id }}" class="btn btn-sm btn-secondary">Manage</a>
+            </div>
+            <div id="rec-section">
+                {% if recurring %}
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    {% for r in recurring %}
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--surface);border-radius:var(--radius-xs);">
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;">{{ r.description }}</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);">{{ r.frequency }} • {{ instance.currency or '$' }}{{ "%.2f" % r.amount }}</div>
+                        </div>
+                        <span class="type-badge {% if r.is_income %}income{% else %}expense{% endif %}">{{ 'Income' if r.is_income else 'Expense' }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color:var(--text-muted)">No recurring transactions.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% if view_config.get('loans', true) %}
+        <div class="settings-card">
+            <div class="dash-section-header">
+                <h3>Loans</h3>
+                <a href="/loans?instance_id={{ instance.id }}" class="btn btn-sm btn-secondary">Manage</a>
+            </div>
+            <div id="loans-section">
+                {% if loans %}
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    {% for loan in loans %}
+                    <div style="padding:12px;background:var(--surface);border-radius:var(--radius-xs);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                            <span style="font-weight:600;font-size:0.9rem;">{{ loan.name }}</span>
+                            <span style="font-weight:700;">{{ instance.currency or '$' }}{{ "%.2f" % loan.total_amount }}</span>
+                        </div>
+                        <div class="progress-bar" style="height:6px;">
+                            <div class="progress-fill" style="width:{{ loan.progress_percent }}%;"></div>
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">{{ loan.tenure_months }} months • {{ loan.monthly_due }}/mo</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color:var(--text-muted)">No loans yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% if view_config.get('reports', true) %}
+        <div class="settings-card full-width">
+            <div class="dash-section-header">
+                <h3>Monthly Breakdown</h3>
+                <a href="/reports?instance_id={{ instance.id }}" class="btn btn-sm btn-secondary">Full Reports</a>
+            </div>
+            <div id="reports-section">
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h4>By Category</h4>
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>Income vs Expense</h4>
+                        <canvas id="typeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="instance-actions">
+        <a href="/instances/{{ instance.id }}/settings" class="btn btn-secondary">&#9881; Instance Settings</a>
+        {% if instance.role == 'owner' %}
+        <a href="/instances/{{ instance.id }}/delete" class="btn btn-danger" onclick="return confirm('Delete this instance and all its data?')">Delete Instance</a>
+        {% else %}
+        <a href="/instances/{{ instance.id }}/leave" class="btn btn-secondary" onclick="return confirm('Leave this instance?')">Leave Instance</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function copyToClipboard(btn, text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            if (typeof showToast === 'function') showToast('Copied to clipboard', 'success');
+            btn.textContent = '✓';
+            setTimeout(() => btn.textContent = '📋', 1500);
+        }).catch(() => { fallbackCopyToClipboard(btn, text); });
+    } else { fallbackCopyToClipboard(btn, text); }
+}
+function fallbackCopyToClipboard(btn, text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+        document.execCommand('copy');
+        if (typeof showToast === 'function') showToast('Copied to clipboard', 'success');
+        btn.textContent = '✓';
+        setTimeout(() => btn.textContent = '📋', 1500);
+    } catch (err) {
+        if (typeof showToast === 'function') showToast('Copy failed', 'error');
+    }
+    document.body.removeChild(ta);
+}
+function copyCard(e, btn, number) {
+    e.stopPropagation(); e.preventDefault();
+    const doCopy = () => {
+        btn.textContent = '✓'; btn.classList.add('copied');
+        if (typeof showToast === 'function') showToast('Copied to clipboard', 'success');
+        setTimeout(() => { btn.textContent = '📋'; btn.classList.remove('copied'); }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(number).then(doCopy).catch(() => fallbackCopy(number, doCopy));
+    } else { fallbackCopy(number, doCopy); }
+}
+function fallbackCopy(text, callback) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); callback(); }
+    catch (err) { if (typeof showToast === 'function') showToast('Copy failed', 'error'); }
+    document.body.removeChild(ta);
+}
+function toggleCvv(e, id) {
+    e.stopPropagation(); e.preventDefault();
+    const dots = document.getElementById('cvv-dots-' + id);
+    const rev = document.getElementById('cvv-rev-' + id);
+    const eye = document.getElementById('eye-' + id);
+    if (rev.style.display === 'none') { rev.style.display = 'inline'; dots.style.display = 'none'; eye.textContent = '🙈'; }
+    else { rev.style.display = 'none'; dots.style.display = 'inline'; eye.textContent = '👁️'; }
+}
+{% if category_data %}
+new Chart(document.getElementById('categoryChart'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ category_data['labels'] | tojson }},
+        datasets: [{
+            data: {{ category_data['values'] | tojson }},
+            backgroundColor: {{ category_data['colors'] | tojson }},
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom', labels: { color: getComputedStyle(document.body).getPropertyValue('--text') } } }
+    }
+});
+new Chart(document.getElementById('typeChart'), {
+    type: 'bar',
+    data: {
+        labels: ['Income', 'Expenses', 'Company'],
+        datasets: [{
+            label: 'Amount',
+            data: [{{ summary.income }}, {{ summary.expenses }}, {{ summary.company }}],
+            backgroundColor: ['#10b981', '#ef4444', '#8b5cf6'],
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') }, grid: { color: getComputedStyle(document.body).getPropertyValue('--border') } },
+            x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text') }, grid: { display: false } }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Transactions - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="transactions-page">
+    <div class="page-header">
+        <h1>Transactions</h1>
+        <div class="header-actions">
+            <a href="/export" class="btn btn-secondary">📥 Export CSV</a>
+            <form method="post" action="/import" enctype="multipart/form-data" class="import-form">
+                <input type="file" name="file" accept=".csv" required onchange="this.form.submit()">
+                <span class="btn btn-secondary">📤 Import CSV</span>
+            </form>
+            <a href="/add" class="btn btn-primary">+ Add New</a>
+        </div>
+    </div>
+    {% if request.query_params.get('toast') %}
+    <div class="alert alert-success">{{ request.query_params.get('toast') }}</div>
+    {% endif %}
+    <div class="filters">
+        <form method="get" class="filter-form">
+            <select name="filter_type">
+                <option value="">All Types</option>
+                <option value="income" {% if filter_type == 'income' %}selected{% endif %}>Income</option>
+                <option value="expense" {% if filter_type == 'expense' %}selected{% endif %}>Expense</option>
+                <option value="transfer" {% if filter_type == 'transfer' %}selected{% endif %}>Transfer</option>
+            </select>
+            <select name="filter_instance">
+                <option value="">All Instances</option>
+                {% for inst in instances %}
+                <option value="{{ inst.id }}" {% if filter_instance == inst.id %}selected{% endif %}>{{ inst.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="filter_source">
+                <option value="">All Sources</option>
+                {% for s in sources %}
+                <option value="{{ s.id }}" {% if filter_source == s.id %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="filter_company">
+                <option value="">All</option>
+                <option value="yes" {% if filter_company == 'yes' %}selected{% endif %}>Company Only</option>
+                <option value="no" {% if filter_company == 'no' %}selected{% endif %}>Personal Only</option>
+            </select>
+            <input type="date" name="start_date" value="{{ start_date or '' }}">
+            <input type="date" name="end_date" value="{{ end_date or '' }}">
+            <button type="submit" class="btn btn-secondary">Filter</button>
+            <a href="/transactions" class="btn btn-ghost">Clear</a>
+        </form>
+    </div>
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Instance</th>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Source</th>
+                    <th>Type</th>
+                    <th>Company</th>
+                    <th class="text-right">Amount</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr class="{{ t.transaction_type }}">
+                    <td>
+                        {% if t.instance_name %}
+                        <a href="/instances/{{ t.instance_id }}" class="instance-link">{{ t.instance_name }}</a>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{{ t.date }}</td>
+                    <td>{{ t.description }}</td>
+                    <td>
+                        {% if t.category_name %}
+                        <span class="category-pill" style="background: {{ t.category_color }}20; color: {{ t.category_color }}">{{ t.category_name }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if t.transaction_type == 'transfer' and t.to_source_name %}
+                        {{ t.source_name }} → {{ t.to_source_name }}
+                        {% else %}
+                        {{ t.source_name or '—' }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="type-badge {{ t.transaction_type }}">{{ t.transaction_type | title }}</span>
+                    </td>
+                    <td>
+                        {% if t.is_company %}<span class="company-badge">Company</span>{% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-right {{ t.transaction_type }}">
+                        {% if t.transaction_type == 'income' %}+{% endif %}{{ currency }}{{ "%.2f" % t.amount }}
+                    </td>
+                    <td>
+                        <a href="/edit/{{ t.id }}" class="btn btn-sm btn-ghost">Edit</a>
+                        <a href="/delete/{{ t.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete?')">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
